@@ -6,7 +6,8 @@ import { Server } from 'socket.io';
 import userRoutes from './routes/users';
 import presentationRoutes from './routes/presentations';
 import slideRoutes from './routes/slides';
-import { setupSocket } from 'sockets/socketHandler';
+import { setupSocket } from './sockets/socketHandler';
+
 
 dotenv.config();
 
