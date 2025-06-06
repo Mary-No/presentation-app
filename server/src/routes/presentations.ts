@@ -34,12 +34,32 @@ router.post('/', async (req, res) => {
 });
 
 
-router.get('/', async (_, res) => {
-    const presentations = await prisma.presentation.findMany({
-        orderBy: { createdAt: 'desc' },
-    });
-    res.json(presentations);
+import { Prisma } from '@prisma/client'
+
+router.get('/', async (req, res) => {
+    const { query } = req.query;
+
+    const where = query
+        ? {
+            title: {
+                contains: query as string,
+                mode: 'insensitive' as Prisma.QueryMode,
+            },
+        }
+        : undefined;
+
+    try {
+        const presentations = await prisma.presentation.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+        });
+
+        res.json(presentations);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch presentations' });
+    }
 });
+
 
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
