@@ -1,0 +1,18 @@
+.tabsWrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+:global .ant-tabs-ink-bar {
+  background-color: #009785 !important;
+
+}
+:global .ant-tabs-tab-btn{
+  color: #007a70 !important;
+  font-size: 24px;
+}
+:global .ant-tabs-tab-active .ant-tabs-tab-btn{
+  color: #009785 !important;
+  font-weight: 600;
+}
