@@ -1,7 +1,7 @@
 import type { Slide } from "../app/types";
 import { baseApi } from "./baseApi"
 
-export const authApi = baseApi.injectEndpoints({
+export const slidesApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         addSlide: builder.mutation<Slide, { presentationId: string; nickname: string }>({
             query: ({ presentationId, nickname }) => ({
@@ -22,7 +22,18 @@ export const authApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Slides'],
         }),
+        updateSlide: builder.mutation<
+            Slide,
+            { id: string; content: string; nickname: string }
+        >({
+            query: ({ id, content, nickname }) => ({
+                url: `/slides/${id}`,
+                method: 'PATCH',
+                body: { content, nickname },
+            }),
+            invalidatesTags: ['Slides'],
+        }),
     }),
 })
 
-export const { useAddSlideMutation, useDeleteSlideMutation  } = authApi
+export const { useAddSlideMutation, useDeleteSlideMutation , useUpdateSlideMutation } = slidesApi

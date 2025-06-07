@@ -1,11 +1,11 @@
 import { Alert, Button, Typography } from "antd";
 import { useState } from "react";
-import { useAppSelector, useAppDispatch } from "../app/hooks.ts";
+import { useAppSelector, useAppDispatch } from "../../app/hooks.ts";
 import Title from "antd/lib/typography/Title";
 import { CloseOutlined } from "@ant-design/icons";
-import { useAddSlideMutation, useDeleteSlideMutation } from "../api/slidesApi.ts";
-import { addSlideToStore, removeSlideFromStore } from "../api/slidesSlice.ts";
-
+import {useAddSlideMutation, useDeleteSlideMutation} from "../../api/slidesApi.ts";
+import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex} from "../../api/slidesSlice.ts";
+import s from './Slides.module.scss'
 
 const { Text } = Typography;
 
@@ -17,12 +17,14 @@ type SlidesProps = {
 
 export const Slides = ({ presentationId, onSlideAdded, owner }: SlidesProps) => {
     const slides = useAppSelector((state) => state.slides.slides);
+    console.log(slides)
+    const currentSlideIndex = useAppSelector((state) => state.slides.currentSlideIndex);
+    console.log(currentSlideIndex);
     const [addSlide, { isLoading }] = useAddSlideMutation();
     const [deleteSlide] = useDeleteSlideMutation();
-
+    // const [updateSlide, { isLoading, isError, isSuccess, error }] = useUpdateSlideMutation()
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
     const nickname = useAppSelector((state) => state.user.nickname);
     const dispatch = useAppDispatch();
 
@@ -55,7 +57,10 @@ export const Slides = ({ presentationId, onSlideAdded, owner }: SlidesProps) => 
             setError(errorMessage);
         }
     };
-
+    const handleSelectSlide = (index: number) => {
+        // dispatch(updateSlideContent({ id: , content:  }))
+        dispatch(setCurrentSlideIndex(index))
+    }
     return (
         <div
             style={{
@@ -90,7 +95,9 @@ export const Slides = ({ presentationId, onSlideAdded, owner }: SlidesProps) => 
                 ) : (
                     slides.map((slide) => (
                         <div
+                            onClick={() => handleSelectSlide(slide.slideIndex)}
                             key={slide.id}
+                            className={slide.slideIndex===currentSlideIndex ? s.activeSlide: ""}
                             style={{
                                 padding: "1rem",
                                 marginBottom: "1rem",
