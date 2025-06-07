@@ -25,7 +25,7 @@ export const PresentationPage = () => {
     )?.role;
     const owner = nickname === presentation?.ownerNickname;
 
-    const { connected, socket } = useSocket(SOCKET_URL, { autoConnect: false });
+    const { socket, connected } = useSocket(SOCKET_URL);
 
     // Подключаемся к сокету, когда есть нужные данные и сокет не подключен
     useEffect(() => {
