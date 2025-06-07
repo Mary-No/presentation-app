@@ -68,7 +68,6 @@ router.get('/:id', async (req, res) => {
     if (!nickname) {
         return res.status(400).json({ error: 'Nickname is required' });
     }
-
     try {
         const user = await prisma.user.findUnique({
             where: { nickname: nickname as string },
@@ -87,6 +86,18 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Presentation not found' });
         }
 
+        const hasRole = presentation.roles.some(
+            (r) => r.userNickname.toLowerCase() === nickname.toString().toLowerCase()
+        );
+        if (!hasRole) {
+            await prisma.userRole.create({
+                data: {
+                    presentationId: id,
+                    userNickname: nickname as string,
+                    role: 'viewer',
+                },
+            });
+        }
         const updatedPresentation = await prisma.presentation.findUnique({
             where: { id },
             include: { slides: true, roles: true },
@@ -98,6 +109,7 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to get presentation' });
     }
 });
+
 
 router.patch('/:id/roles', async (req, res) => {
     const { id } = req.params;
