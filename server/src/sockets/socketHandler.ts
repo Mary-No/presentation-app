@@ -1,4 +1,6 @@
 import { Server, Socket } from 'socket.io';
+import path from "path";
+import fs from "fs";
 
 interface ClientData {
     nickname: string;
@@ -8,11 +10,18 @@ interface ClientData {
 
 const userRooms = new Map<string, ClientData>();
 
+const logFilePath = path.join(__dirname, '../../socket.log');
+
 export const setupSocket = (io: Server) => {
+
     io.on('connection', (socket: Socket) => {
         console.log('👤 Connected:', socket.id);
+        const connectLog = `[ Socket connected: ${socket.id}\n`;
+        fs.appendFile(logFilePath, connectLog, (err) => err && console.error(err));
 
         socket.on('join', ({ presentationId, nickname, role }: ClientData) => {
+            console.log(`[ Socket join: ${socket.id}\n`);
+
             socket.join(presentationId);
             userRooms.set(socket.id, { nickname, role, presentationId });
 
@@ -23,18 +32,25 @@ export const setupSocket = (io: Server) => {
             io.to(presentationId).emit('user_joined', {
                 users: usersInRoom,
             });
+
         });
 
         socket.on('cursor_move', ({ x, y }) => {
             const user = userRooms.get(socket.id);
             if (user) {
+                const connectLog = `[ Socket join: ${socket.id}\n`;
+                fs.appendFile(logFilePath, connectLog, (err) => err && console.error(err));
+
                 socket.to(user.presentationId).emit('cursor_update', {
                     socketId: socket.id,
                     nickname: user.nickname,
                     x,
                     y,
                 });
+                const connectLogMsg = `[ cursor_update: ${ x}, ${y }\n`;
+                fs.appendFile(logFilePath, connectLogMsg, (err) => err && console.error(err));
             }
+
         });
 
         socket.on('update_slide', ({ slideId, content }) => {

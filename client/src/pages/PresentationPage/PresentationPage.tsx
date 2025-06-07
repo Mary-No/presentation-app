@@ -5,8 +5,7 @@ import { useGetPresentationByIdQuery } from "../../api/presentationApi.ts";
 import s from "./PresentationPage.module.scss";
 
 import { useEffect, useCallback } from "react";
-import { useSocket } from "socket.io-react-hook";
-import { connectToPresentation, SOCKET_URL } from "../../socket/socket.ts";
+import { connectToPresentation, emitCursorMove, socket } from "../../socket/socket.ts";
 import type { Roles, Role } from "../../app/types.ts";
 import { RemoteCursor } from "../../components/RemoteCursor.tsx";
 import { useRemoteCursors } from "../../hooks/useRemoteCursors.ts";
@@ -25,11 +24,9 @@ export const PresentationPage = () => {
     )?.role;
     const owner = nickname === presentation?.ownerNickname;
 
-    const { socket, connected } = useSocket(SOCKET_URL);
 
-    // Подключаемся к сокету, когда есть нужные данные и сокет не подключен
     useEffect(() => {
-        // Обработчик подключения
+        socket.connect();
         socket.on("connect", () => {
             console.log("Connected");
         });
@@ -48,26 +45,23 @@ export const PresentationPage = () => {
             socket.off("connect_error");
             socket.disconnect();
         };
-    }, [connected, socket]);
+    }, [ socket]);
 
-    // Когда подключены и есть данные - отправляем join
     useEffect(() => {
-        if (connected && presentation && nickname && role) {
+        if (presentation && nickname && role) {
             connectToPresentation(socket, {
                 presentationId: presentation.id,
                 nickname,
                 role,
             });
         }
-    }, [connected, presentation, nickname, role, socket]);
+    }, [presentation, nickname, role, socket]);
 
-
-    // Меморизация onMouseMove для оптимизации
     const onMouseMove = useCallback((e: React.MouseEvent) => {
-        if (connected && nickname) {
-            socket.emit("cursor_move", { x: e.clientX, y: e.clientY });
+        if ( nickname) {
+            emitCursorMove(socket, e.clientX, e.clientY);
         }
-    }, [connected, socket, nickname]);
+    }, [socket, nickname]);
 
     const remoteCursors = useRemoteCursors(socket);
 
@@ -75,7 +69,15 @@ export const PresentationPage = () => {
     if (isError || !presentation) return <div>Error loading presentation</div>;
 
     return (
-        <div onMouseMove={onMouseMove} className={s.slidesContainer} style={{ position: "relative" }}>
+        <div onMouseMove={onMouseMove} style={{position: "relative"}}>
+            <div  className={s.slidesContainer} >
+                <Slides
+                    slides={presentation.slides}
+                    presentationId={presentation.id}
+                    onSlideAdded={() => refetch()}
+                    owner={owner}
+                />
+            </div>
             {Object.entries(remoteCursors).map(([socketId, cursor]) => (
                 <RemoteCursor
                     key={socketId}
@@ -84,13 +86,7 @@ export const PresentationPage = () => {
                     nickname={cursor.nickname}
                 />
             ))}
-
-            <Slides
-                slides={presentation.slides}
-                presentationId={presentation.id}
-                onSlideAdded={() => refetch()}
-                owner={owner}
-            />
         </div>
+
     )
-    }
+}

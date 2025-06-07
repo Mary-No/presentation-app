@@ -7,6 +7,7 @@ import userRoutes from './routes/users';
 import presentationRoutes from './routes/presentations';
 import slideRoutes from './routes/slides';
 import { setupSocket } from './sockets/socketHandler';
+import { requestLogger } from './middleware/logger';
 
 
 dotenv.config();
@@ -18,7 +19,7 @@ app.use(cors({
     credentials: true,
 }));
 app.use(express.json());
-
+app.use(requestLogger);
 app.use('/users', userRoutes);
 app.use('/presentations', presentationRoutes);
 app.use('/slides', slideRoutes);

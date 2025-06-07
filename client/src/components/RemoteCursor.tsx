@@ -11,9 +11,9 @@ export const RemoteCursor: React.FC<RemoteCursorProps> = ({ x, y, nickname }) =>
         <div
             style={{
                 position: "absolute",
+                pointerEvents: "none",
                 top: y,
                 left: x,
-                pointerEvents: "none",
                 backgroundColor: "rgba(0, 150, 255, 0.7)",
                 borderRadius: "50%",
                 width: 10,
