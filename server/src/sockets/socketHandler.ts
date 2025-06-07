@@ -13,6 +13,12 @@ const userRooms = new Map<string, ClientData>();
 const logFilePath = path.join(__dirname, '../../socket.log');
 
 export const setupSocket = (io: Server) => {
+    function emitUsersInRoom(io: Server, presentationId: string) {
+        const usersInRoom = Array.from(userRooms.entries())
+            .filter(([, data]) => data.presentationId === presentationId)
+            .map(([id, data]) => ({ socketId: id, ...data }));
+        io.to(presentationId).emit('user_joined', { users: usersInRoom });
+    }
 
     io.on('connection', (socket: Socket) => {
         console.log('👤 Connected:', socket.id);
@@ -20,14 +26,14 @@ export const setupSocket = (io: Server) => {
         fs.appendFile(logFilePath, connectLog, (err) => err && console.error(err));
 
         socket.on('join', ({ presentationId, nickname, role }: ClientData) => {
-            console.log(`[ Socket join: ${socket.id}\n`);
-
             socket.join(presentationId);
             userRooms.set(socket.id, { nickname, role, presentationId });
+            emitUsersInRoom(io, presentationId);
 
             const usersInRoom = Array.from(userRooms.entries())
                 .filter(([, data]) => data.presentationId === presentationId)
                 .map(([id, data]) => ({ socketId: id, ...data }));
+            console.log(usersInRoom)
 
             io.to(presentationId).emit('user_joined', {
                 users: usersInRoom,
@@ -38,7 +44,7 @@ export const setupSocket = (io: Server) => {
         socket.on('cursor_move', ({ x, y }) => {
             const user = userRooms.get(socket.id);
             if (user) {
-                const connectLog = `[ Socket join: ${socket.id}\n`;
+                const connectLog = `[ Cursor move from socket: ${socket.id}\n`;
                 fs.appendFile(logFilePath, connectLog, (err) => err && console.error(err));
 
                 socket.to(user.presentationId).emit('cursor_update', {
@@ -109,6 +115,7 @@ export const setupSocket = (io: Server) => {
             const user = userRooms.get(socket.id);
             if (user) {
                 userRooms.delete(socket.id);
+                emitUsersInRoom(io, user.presentationId);
                 io.to(user.presentationId).emit('user_left', {
                     socketId: socket.id,
                     nickname: user.nickname,

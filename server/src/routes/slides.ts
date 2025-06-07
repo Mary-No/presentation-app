@@ -81,7 +81,6 @@ router.patch('/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to update slide' });
     }
 });
-
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const { nickname } = req.body;
@@ -101,9 +100,24 @@ router.delete('/:id', async (req, res) => {
     }
 
     try {
-        await prisma.slide.delete({ where: { id } });
+        await prisma.$transaction(async (tx) => {
+            await tx.slide.delete({ where: { id } });
+            const slides = await tx.slide.findMany({
+                where: { presentationId: slide.presentationId },
+                orderBy: { slideIndex: 'asc' },
+            });
+
+            for (let i = 0; i < slides.length; i++) {
+                await tx.slide.update({
+                    where: { id: slides[i].id },
+                    data: { slideIndex: i },
+                });
+            }
+        });
+
         res.status(204).send();
     } catch (err) {
+        console.error('Slide deletion failed:', err);
         res.status(500).json({ error: 'Failed to delete slide' });
     }
 });
