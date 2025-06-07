@@ -13,14 +13,9 @@ export interface ClientData {
 }
 
 export const connectToPresentation = (socket: any, data: ClientData) => {
-    console.log('socket', socket);
-    console.log('data', data);
-
     socket.emit('join', data);
 };
 
 export const emitCursorMove = (socket: any, x: number, y: number) => {
-    console.log('socket', socket);
-    console.log('x,y', x, y);
     socket.emit('cursor_move', { x, y });
 };

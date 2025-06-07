@@ -3,7 +3,7 @@ import type { Socket } from "socket.io-client";
 
 type CursorData = { socketId: string; nickname: string; x: number; y: number };
 
-export function useRemoteCursors(socket: Socket) {
+export function useRemoteCursors(socket: Socket, usersInRoom: { socketId: string }[]) {
     const [remoteCursors, setRemoteCursors] = useState<Record<string, { nickname: string; x: number; y: number }>>({});
 
     useEffect(() => {
@@ -20,10 +20,21 @@ export function useRemoteCursors(socket: Socket) {
 
         socket.on("cursor_update", handler);
 
+
         return () => {
             socket.off("cursor_update", handler);
         };
     }, [socket]);
+
+    useEffect(() => {
+        setRemoteCursors(prev => {
+            const allowedIds = new Set(usersInRoom.map(u => u.socketId));
+            const filtered = Object.fromEntries(
+                Object.entries(prev).filter(([socketId]) => allowedIds.has(socketId))
+            );
+            return filtered;
+        });
+    }, [usersInRoom]);
 
     return remoteCursors;
 }

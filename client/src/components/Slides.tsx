@@ -1,25 +1,30 @@
-import {Alert, Button, Typography} from "antd";
-import {useAddSlideMutation, useDeleteSlideMutation} from "../api/sliceApi.ts";
+import { Alert, Button, Typography } from "antd";
 import { useState } from "react";
-import type {Slide} from "../app/types.ts";
-import {useAppSelector} from "../app/hooks.ts";
+import { useAppSelector, useAppDispatch } from "../app/hooks.ts";
 import Title from "antd/lib/typography/Title";
-import {CloseOutlined} from "@ant-design/icons";
+import { CloseOutlined } from "@ant-design/icons";
+import { useAddSlideMutation, useDeleteSlideMutation } from "../api/slidesApi.ts";
+import { addSlideToStore, removeSlideFromStore } from "../api/slidesSlice.ts";
+
 
 const { Text } = Typography;
 
 type SlidesProps = {
-    slides: Slide[];
     presentationId: string;
     onSlideAdded: () => void;
-    owner: boolean
+    owner: boolean;
 };
 
-export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesProps) => {
+export const Slides = ({ presentationId, onSlideAdded, owner }: SlidesProps) => {
+    const slides = useAppSelector((state) => state.slides.slides);
     const [addSlide, { isLoading }] = useAddSlideMutation();
+    const [deleteSlide] = useDeleteSlideMutation();
+
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
-    const nickname = useAppSelector((state) => state.user.nickname)
+
+    const nickname = useAppSelector((state) => state.user.nickname);
+    const dispatch = useAppDispatch();
 
     const handleClick = async () => {
         try {
@@ -27,7 +32,8 @@ export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesPr
                 setError("User is not logged in");
                 return;
             }
-            await addSlide({ presentationId, nickname }).unwrap();
+            const newSlide = await addSlide({ presentationId, nickname }).unwrap();
+            dispatch(addSlideToStore(newSlide));
             setSuccessMsg(`Slide ${slides.length + 1} was added`);
             setError(null);
             onSlideAdded();
@@ -38,12 +44,12 @@ export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesPr
             setSuccessMsg(null);
         }
     };
-    const [deleteSlide] = useDeleteSlideMutation();
+
     const handleDelete = async (id: string) => {
         try {
             await deleteSlide({ id, nickname }).unwrap();
+            dispatch(removeSlideFromStore(id));
             setSuccessMsg("Slide deleted successfully");
-
         } catch (err: any) {
             const errorMessage = err?.data?.error || "Failed to delete slide";
             setError(errorMessage);
@@ -59,24 +65,28 @@ export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesPr
                 borderRight: "1px solid #f0f0f0",
             }}
         >
-            {owner && <div style={{padding: "1rem", borderBottom: "1px solid #f0f0f0"}}>
-                <Button color="cyan" variant="solid" onClick={handleClick} block loading={isLoading}>
-                    Add Slide
-                </Button>
-            </div>}
+            {owner && (
+                <div style={{ padding: "1rem", borderBottom: "1px solid #f0f0f0" }}>
+                    <Button
+                        color="cyan"
+                        variant="solid"
+                        onClick={handleClick}
+                        block
+                        loading={isLoading}
+                    >
+                        Add Slide
+                    </Button>
+                </div>
+            )}
 
-            {error && <Alert message={error} type="error" showIcon/>}
-            {successMsg && <Alert message={successMsg} type="success" showIcon/>}
+            {error && <Alert message={error} type="error" showIcon />}
+            {successMsg && <Alert message={successMsg} type="success" showIcon />}
 
-            <div
-                style={{
-                    flex: 1,
-                    overflowY: "auto",
-                    padding: "1rem",
-                }}
-            >
+            <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
                 {slides.length === 0 ? (
-                    <Title style={{textAlign: 'center'}} type="secondary" level={4}>No slides yet</Title>
+                    <Title style={{ textAlign: "center" }} type="secondary" level={4}>
+                        No slides yet
+                    </Title>
                 ) : (
                     slides.map((slide) => (
                         <div
@@ -89,7 +99,7 @@ export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesPr
                                 background: "#fafafa",
                                 display: "flex",
                                 justifyContent: "space-between",
-                                position:"relative"
+                                position: "relative",
                             }}
                         >
                             <Text strong>Slide {slide.slideIndex + 1}</Text>
