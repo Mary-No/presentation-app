@@ -87,21 +87,6 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Presentation not found' });
         }
 
-        const userRole = await prisma.userRole.upsert({
-            where: {
-                presentationId_userNickname: {
-                    presentationId: id,
-                    userNickname: nickname as string,
-                },
-            },
-            update: {},
-            create: {
-                presentationId: id,
-                userNickname: nickname as string,
-                role: Role.viewer,
-            },
-        });
-
         const updatedPresentation = await prisma.presentation.findUnique({
             where: { id },
             include: { slides: true, roles: true },

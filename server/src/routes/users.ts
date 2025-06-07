@@ -27,13 +27,23 @@ router.post('/', async (req, res) => {
 router.get('/:nickname/presentations', async (req, res) => {
     const { nickname } = req.params;
 
-    const roles = await prisma.userRole.findMany({
-        where: { userNickname: nickname },
-        include: { presentation: true },
-    });
+    try {
+        const presentations = await prisma.presentation.findMany({
+            where: {
+                roles: {
+                    some: {
+                        userNickname: nickname,
+                        role: 'creator',
+                    },
+                },
+            },
+        });
 
-    const presentations = roles.map((r) => r.presentation);
-    res.json(presentations);
+        res.json(presentations);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to load presentations' });
+    }
 });
 
 export default router;
