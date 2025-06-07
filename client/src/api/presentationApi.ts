@@ -5,6 +5,7 @@ export const presentationApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         getUserPresentations: builder.query<Presentation[], string>({
             query: (nickname) => `/users/${nickname}/presentations`,
+            providesTags: ['Presentations']
         }),
         getAllPresentations: builder.query({
             query: (search?: string) => {
@@ -31,11 +32,14 @@ export const presentationApi = baseApi.injectEndpoints({
             }),
             providesTags: ['Slides'],
         }),
-        deletePresentation: builder.mutation({
-            query: (body) => ({
-                url: '/presentations',
-                method: 'POST',
-                body,
+        deletePresentation: builder.mutation<
+            { message: string },
+            { id: string; nickname: string }
+        >({
+            query: ({ id, nickname }) => ({
+                url: `/presentations/${id}`,
+                method: 'DELETE',
+                body: { nickname },
             }),
             invalidatesTags: ['Presentations'],
         }),
@@ -43,4 +47,4 @@ export const presentationApi = baseApi.injectEndpoints({
     }),
 })
 
-export const {  useGetUserPresentationsQuery,useGetAllPresentationsQuery, useCreatePresentationMutation, useGetPresentationByIdQuery  } = presentationApi
+export const {  useGetUserPresentationsQuery,useGetAllPresentationsQuery, useCreatePresentationMutation, useGetPresentationByIdQuery, useDeletePresentationMutation  } = presentationApi

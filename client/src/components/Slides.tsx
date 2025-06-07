@@ -1,9 +1,10 @@
-import { Alert, Button, Typography } from "antd";
-import { useAddSlideMutation } from "../api/sliceApi.ts";
+import {Alert, Button, Typography} from "antd";
+import {useAddSlideMutation, useDeleteSlideMutation} from "../api/sliceApi.ts";
 import { useState } from "react";
 import type {Slide} from "../app/types.ts";
 import {useAppSelector} from "../app/hooks.ts";
 import Title from "antd/lib/typography/Title";
+import {CloseOutlined} from "@ant-design/icons";
 
 const { Text } = Typography;
 
@@ -35,6 +36,17 @@ export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesPr
             const errorMessage = err.data?.error || "Error adding slide";
             setError(errorMessage);
             setSuccessMsg(null);
+        }
+    };
+    const [deleteSlide] = useDeleteSlideMutation();
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteSlide({ id, nickname }).unwrap();
+            setSuccessMsg("Slide deleted successfully");
+
+        } catch (err: any) {
+            const errorMessage = err?.data?.error || "Failed to delete slide";
+            setError(errorMessage);
         }
     };
 
@@ -75,9 +87,28 @@ export const Slides = ({ slides, presentationId, onSlideAdded, owner }: SlidesPr
                                 border: "1px solid #d9d9d9",
                                 borderRadius: 4,
                                 background: "#fafafa",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                position:"relative"
                             }}
                         >
                             <Text strong>Slide {slide.slideIndex + 1}</Text>
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<CloseOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(slide.id);
+                                }}
+                                style={{
+                                    position: "absolute",
+                                    top: 14,
+                                    right: 8,
+                                    zIndex: 10,
+                                    color: "#999",
+                                }}
+                            />
                         </div>
                     ))
                 )}

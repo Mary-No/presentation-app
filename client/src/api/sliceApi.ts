@@ -11,7 +11,18 @@ export const authApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Slides'],
         }),
+        deleteSlide: builder.mutation<
+            { message: string },
+            { id: string; nickname: string }
+        >({
+            query: ({ id, nickname }) => ({
+                url: `/slides/${id}`,
+                method: 'DELETE',
+                body: { nickname },
+            }),
+            invalidatesTags: ['Slides'],
+        }),
     }),
 })
 
-export const { useAddSlideMutation  } = authApi
+export const { useAddSlideMutation, useDeleteSlideMutation  } = authApi

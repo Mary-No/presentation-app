@@ -1,8 +1,11 @@
 import Paragraph from "antd/lib/typography/Paragraph";
 import type {Presentation} from "../app/types.ts";
-import {Button, Card, Col, Row} from "antd";
+import {Button, Card, Col, message, Row} from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import {useNavigate} from "react-router-dom";
+import { useDeletePresentationMutation } from "../api/presentationApi.ts";
+import { useAppSelector } from "../app/hooks.ts";
+
 
 type Props = {
     presentations: Presentation[];
@@ -19,6 +22,18 @@ export const PresentationGallery = ({ presentations, type }: Props) => {
             console.error('Failed to loading presentation', err);
         }
     }
+    const [deletePresentation] = useDeletePresentationMutation();
+    const nickname = useAppSelector((state) => state.user.nickname);
+    const handleDelete = async (id: string) => {
+        try {
+            await deletePresentation({ id, nickname }).unwrap();
+            message.success("Presentation deleted successfully");
+        } catch (err: any) {
+            const errorMessage = err?.data?.error || "Failed to delete presentation";
+            message.error(errorMessage);
+        }
+    };
+
     return (
         <Row gutter={[16, 16]}>
             {presentations.map((p) => (
@@ -59,7 +74,7 @@ export const PresentationGallery = ({ presentations, type }: Props) => {
                             icon={<CloseOutlined />}
                             onClick={(e) => {
                                 e.stopPropagation();
-
+                                handleDelete(p.id);
                             }}
                             style={{
                                 position: "absolute",
