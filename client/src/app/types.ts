@@ -12,7 +12,7 @@ export type Slide = {
     id: string;
     presentationId: string;
     slideIndex: number;
-    content: string;
+    content: any;
 }
 
 export type Role = {

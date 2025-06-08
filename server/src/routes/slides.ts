@@ -41,7 +41,7 @@ router.post('/:id', async (req, res) => {
             data: {
                 id: uuidv4(),
                 presentationId,
-                content: '',
+                content: {},
                 slideIndex: nextIndex,
             },
         });

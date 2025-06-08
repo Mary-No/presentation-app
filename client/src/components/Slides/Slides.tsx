@@ -1,13 +1,11 @@
 import { Alert, Button, Typography } from "antd";
-import { useState } from "react";
+import {useEffect, useState } from "react";
 import { useAppSelector, useAppDispatch } from "../../app/hooks.ts";
 import Title from "antd/lib/typography/Title";
 import { CloseOutlined } from "@ant-design/icons";
 import {useAddSlideMutation, useDeleteSlideMutation, useUpdateSlideMutation} from "../../api/slidesApi.ts";
 import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
 import s from './Slides.module.scss'
-
-
 
 const { Text } = Typography;
 
@@ -88,12 +86,7 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                     }
                 }
             }
-            // Загружаем новый слайд
-            if (!newSlide.content || newSlide.content === "") {
-                editor.store.clear();
-                editor.store.createPage();
-                editor.store.setCurrentPageId(editor.store.pages[0].id);
-            } else {
+            if (newSlide.content){
                 const snapshot = JSON.parse(newSlide.content);
                 editor.loadSnapshot(snapshot);
             }
@@ -104,6 +97,15 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
             setError("Failed to switch slide: " + (error as Error).message);
         }
     };
+
+    useEffect(() => {
+        const editor = getCurrentEditor();
+        if (slides.length > 0 && editor && editor.store && currentSlideIndex === 0) {
+            handleSelectSlide(0);
+        }
+    }, [slides, getCurrentEditor]);
+
+
     return (
         <div
             style={{
