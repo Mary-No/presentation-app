@@ -7,16 +7,17 @@ import { useSocketConnection } from "../../hooks/useSocketConnection";
 import { useJoinPresentation } from "../../hooks/useJoinPresentation";
 import { useCursorSync } from "../../hooks/useCursorSync";
 import s from "./PresentationPage.module.scss"
+import { useRef } from "react";
 
 
 export const PresentationPage = () => {
 
     const { nickname, presentation, refetch, isLoading, isError } = usePresentationInfo();
+    const editorRef = useRef<any>(null);
     const { usersInRoom } = useSocketConnection();
-    useJoinPresentation({ presentation, nickname });
+    const role = useJoinPresentation({ presentation, nickname });
     const owner = nickname === presentation?.ownerNickname;
     const { onMouseMove, remoteCursors } = useCursorSync({ nickname, usersInRoom });
-
 
 
     if (isLoading) return <div>Loading...</div>;
@@ -28,11 +29,13 @@ export const PresentationPage = () => {
                 <Slides
                 presentationId={presentation.id}
                 onSlideAdded={refetch}
-                owner={owner}/>
+                owner={owner}
+                getCurrentEditor={() => editorRef.current}
+                />
             </div>
             <div className={s.drawTools}>
                 <div className={s.presentationTitle}><h3>{presentation.title}</h3></div>
-                <DrawBoard />
+                <DrawBoard role={role} onEditorMount={(editor) => (editorRef.current = editor)}/>
             </div>
             <UsersList usersInRoom={usersInRoom} />
             {Object.entries(remoteCursors).map(([socketId, cursor]) => (

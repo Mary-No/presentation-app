@@ -1,10 +1,27 @@
 import { Tldraw } from 'tldraw'
 import 'tldraw/tldraw.css'
-import s from "./DrawBoard.module.scss"
+import type { Roles } from "../../app/types.ts";
 
-export const DrawBoard = ()=>{
+type Props = {
+    role: Roles | undefined;
+    onEditorMount: (editor: any) => void; // new
+};
 
-    return <div className={s.container}>
-        <Tldraw options={{ maxPages: 1 }}/>
-    </div>
-}
+export const DrawBoard = ({ role, onEditorMount }: Props) => {
+    const isViewer = role === 'viewer';
+
+    return (
+        <div style={{ height: '100vh' }}>
+            <div className="tldraw__editor" style={{ height: '100%' }}>
+                <Tldraw
+                    onMount={(editor) => {
+                        if (isViewer) {
+                            editor.updateInstanceState({ isReadonly: true });
+                        }
+                        onEditorMount(editor);
+                    }}
+                />
+            </div>
+        </div>
+    );
+};

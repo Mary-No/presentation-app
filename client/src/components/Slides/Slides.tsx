@@ -3,9 +3,12 @@ import { useState } from "react";
 import { useAppSelector, useAppDispatch } from "../../app/hooks.ts";
 import Title from "antd/lib/typography/Title";
 import { CloseOutlined } from "@ant-design/icons";
-import {useAddSlideMutation, useDeleteSlideMutation} from "../../api/slidesApi.ts";
-import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex} from "../../api/slidesSlice.ts";
+import {useAddSlideMutation, useDeleteSlideMutation, useUpdateSlideMutation} from "../../api/slidesApi.ts";
+import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
 import s from './Slides.module.scss'
+import {loadSnapshot, type TLRecord} from "@tldraw/tldraw";
+
+
 
 const { Text } = Typography;
 
@@ -13,16 +16,17 @@ type SlidesProps = {
     presentationId: string;
     onSlideAdded: () => void;
     owner: boolean;
+    getCurrentEditor: () => any;
 };
 
-export const Slides = ({ presentationId, onSlideAdded, owner }: SlidesProps) => {
+export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }: SlidesProps) => {
     const slides = useAppSelector((state) => state.slides.slides);
-    console.log(slides)
+    // console.log(slides)
     const currentSlideIndex = useAppSelector((state) => state.slides.currentSlideIndex);
-    console.log(currentSlideIndex);
+    // console.log(currentSlideIndex);
     const [addSlide, { isLoading }] = useAddSlideMutation();
     const [deleteSlide] = useDeleteSlideMutation();
-    // const [updateSlide, { isLoading, isError, isSuccess, error }] = useUpdateSlideMutation()
+    const [updateSlide] = useUpdateSlideMutation()
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const nickname = useAppSelector((state) => state.user.nickname);
@@ -57,10 +61,58 @@ export const Slides = ({ presentationId, onSlideAdded, owner }: SlidesProps) => 
             setError(errorMessage);
         }
     };
-    const handleSelectSlide = (index: number) => {
-        // dispatch(updateSlideContent({ id: , content:  }))
-        dispatch(setCurrentSlideIndex(index))
-    }
+    const handleSelectSlide = async (index: number) => {
+        debugger
+        const editor = getCurrentEditor();
+        if (!editor || !editor.store) {
+            setError("Editor is not ready");
+            return;
+        }
+
+        const newSlide = slides.find((s) => s.slideIndex === index);
+        if (!newSlide) {
+            setError("Slide not found");
+            return;
+        }
+
+        try {
+            // Сохраняем текущий слайд
+            if (currentSlideIndex !== index) {
+                const currentSlide = slides.find((s) => s.slideIndex === currentSlideIndex);
+                if (currentSlide) {
+                    const currentSnapshot = editor.store.getSnapshot();
+                    const currentContent = JSON.stringify(currentSnapshot);
+
+                    if (currentContent !== currentSlide.content) {
+                        await updateSlide({ id: currentSlide.id, nickname, content: currentContent }).unwrap();
+                        dispatch(updateSlideContent({ id: currentSlide.id, content: currentContent }));
+                    }
+                }
+            }
+            // Загружаем новый слайд
+            if (!newSlide.content || newSlide.content === "") {
+                editor.store.clear();
+                editor.store.createPage();
+                editor.store.setCurrentPageId(editor.store.pages[0].id);
+            } else {
+                // Преобразуем массив в объект записей
+                const snapshotArray = JSON.parse(newSlide.content) as TLRecord[];
+
+                const documentRecords = snapshotArray.reduce<Record<string, TLRecord>>((acc, record) => {
+                    acc[record.id] = record;
+                    return acc;
+                }, {});
+
+                // Загружаем только document в редактор
+                loadSnapshot(editor.store, documentRecords);
+            }
+
+            dispatch(setCurrentSlideIndex(index));
+            setError(null);
+        } catch (error) {
+            setError("Failed to switch slide: " + (error as Error).message);
+        }
+    };
     return (
         <div
             style={{

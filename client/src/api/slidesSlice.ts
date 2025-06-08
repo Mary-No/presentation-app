@@ -17,7 +17,7 @@ const slidesSlice = createSlice({
     reducers: {
         setSlides(state, action: PayloadAction<Slide[]>) {
             state.slides = action.payload;
-            state.currentSlideIndex = 0;
+
         },
         addSlideToStore(state, action: PayloadAction<Slide>) {
             state.slides.push(action.payload);
