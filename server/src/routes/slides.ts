@@ -35,13 +35,16 @@ router.post('/:id', async (req, res) => {
     });
 
     const nextIndex = (currentMax._max.slideIndex ?? -1) + 1;
-
+    const emptyContent = {
+        store: {},
+        schema: {},
+    };
     try {
         const slide = await prisma.slide.create({
             data: {
                 id: uuidv4(),
                 presentationId,
-                content: {},
+                content: emptyContent,
                 slideIndex: nextIndex,
             },
         });
