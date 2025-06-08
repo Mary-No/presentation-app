@@ -1,178 +1,29 @@
-import { Alert, Button, Typography } from "antd";
-import {useEffect, useState } from "react";
-import { useAppSelector, useAppDispatch } from "../../app/hooks.ts";
+import { Alert, Button } from "antd";
 import Title from "antd/lib/typography/Title";
-import { CloseOutlined } from "@ant-design/icons";
-import {useAddSlideMutation, useDeleteSlideMutation, useUpdateSlideMutation} from "../../api/slidesApi.ts";
-import {removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
-import s from './Slides.module.scss'
-import isEqual from "lodash.isequal";
-import {emitAddSlide, emitRemoveSlide, emitSlideUpdate} from "../../socket/socket.ts";
+import { useSlidesLogic } from "../../hooks/useSlidesLogic";
+import { SlideItem } from "./SlideItem";
 
-const { Text } = Typography;
 
 type SlidesProps = {
     presentationId: string;
     onSlideAdded: () => void;
     owner: boolean;
     getCurrentEditor: () => any;
+    nickname: string | null;
 };
 
-export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }: SlidesProps) => {
-    const slides = useAppSelector((state) => state.slides.slides);
-    const currentSlideIndex = useAppSelector((state) => state.slides.currentSlideIndex);
-    const [addSlide, { isLoading }] = useAddSlideMutation();
-    const [deleteSlide] = useDeleteSlideMutation();
-    const [updateSlide] = useUpdateSlideMutation()
-    const [error, setError] = useState<string | null>(null);
-    const [successMsg, setSuccessMsg] = useState<string | null>(null);
-    const nickname = useAppSelector((state) => state.user.nickname);
-    const dispatch = useAppDispatch();
-
-    const handleClick = async () => {
-        try {
-            if (!nickname) {
-                setError("User is not logged in");
-                return;
-            }
-            const currentSlide = slides.find(s => s.slideIndex === currentSlideIndex);
-            const newSlide = await addSlide({ presentationId, nickname }).unwrap();
-            emitAddSlide(newSlide)
-            if (currentSlide) {
-                const editor = getCurrentEditor();
-                const currentSnapshot = editor?.store?.getSnapshot();
-                if (currentSnapshot) {
-                    await updateSlide({
-                        presentationId,
-                        id: currentSlide.id,
-                        nickname,
-                        content: currentSnapshot
-                    }).unwrap();
-                    dispatch(updateSlideContent({
-                        id: currentSlide.id,
-                        content: currentSnapshot
-                    }));
-                    emitSlideUpdate(currentSlide.id,
-                        currentSnapshot)
-                }
-            }
-
-            const editor = getCurrentEditor();
-            if (editor) {
-                const emptySnapshot = editor.store.getSnapshot();
-                emptySnapshot.store = {};
-                editor.store.loadSnapshot(emptySnapshot);
-            }
-
-            dispatch(setCurrentSlideIndex(newSlide.slideIndex));
-            setSuccessMsg(`Slide ${slides.length + 1} was added`);
-            setError(null);
-            onSlideAdded();
-        } catch (e) {
-            const err = e as { status?: number; data?: { error?: string } };
-            const errorMessage = err.data?.error || "Error adding slide";
-            setError(errorMessage);
-            setSuccessMsg(null);
-        }
-    };
-
-    const handleDelete = async (id: string) => {
-        try {
-            const slideToDelete = slides.find(s => s.id === id);
-            await deleteSlide({ id, nickname }).unwrap();
-            dispatch(removeSlideFromStore(id));
-            emitRemoveSlide(id);
-            if (slideToDelete?.slideIndex === currentSlideIndex) {
-                const newIndex = Math.max(0, currentSlideIndex - 1);
-                dispatch(setCurrentSlideIndex(newIndex));
-                handleSelectSlide(newIndex);
-            }
-
-            setSuccessMsg("Slide deleted successfully");
-        } catch (err: any) {
-            const errorMessage = err?.data?.error || "Failed to delete slide";
-            setError(errorMessage);
-        }
-    };
-    const handleSelectSlide = async (index: number) => {
-        const editor = getCurrentEditor();
-        if (!editor || !editor.store) {
-            setError("Editor is not ready");
-            return;
-        }
-
-        const newSlide = slides.find((s) => s.slideIndex === index);
-        if (!newSlide) {
-            setError("Slide not found");
-            return;
-        }
-
-        try {
-            if (currentSlideIndex !== index) {
-                const currentSlide = slides.find((s) => s.slideIndex === currentSlideIndex);
-                if (currentSlide) {
-                    const currentSnapshot = editor.store.getSnapshot();
-                    if (!isEqual(currentSnapshot, currentSlide.content)) {
-                        await updateSlide({ presentationId, id: currentSlide.id, nickname, content: currentSnapshot }).unwrap();
-                        dispatch(updateSlideContent({ id: currentSlide.id, content: currentSnapshot }));
-                        emitSlideUpdate(currentSlide.id,
-                            currentSnapshot)
-                    }
-                }
-            }
-            if (newSlide.content && newSlide.content.store && newSlide.content.schema) {
-                editor.loadSnapshot(newSlide.content);
-            }
-
-            dispatch(setCurrentSlideIndex(index));
-            setError(null);
-        } catch (error) {
-            setError("Failed to switch slide: " + (error as Error).message);
-        }
-    };
-    const handleSaveSlide = async () => {
-        const editor = getCurrentEditor();
-        if (!editor || !editor.store) {
-            setError("Editor is not ready");
-            return;
-        }
-
-        const currentSlide = slides.find(s => s.slideIndex === currentSlideIndex);
-        if (!currentSlide) {
-            setError("Current slide not found");
-            return;
-        }
-
-        try {
-            const currentSnapshot = editor.store.getSnapshot();
-
-            if (!isEqual(currentSnapshot, currentSlide.content)) {
-                await updateSlide({
-                    presentationId,
-                    id: currentSlide.id,
-                    nickname,
-                    content: currentSnapshot,
-                }).unwrap();
-
-                dispatch(updateSlideContent({ id: currentSlide.id, content: currentSnapshot }));
-                emitSlideUpdate(currentSlide.id, currentSnapshot);
-                setSuccessMsg("Slide saved successfully");
-            } else {
-                setSuccessMsg("No changes to save");
-            }
-            setError(null);
-        } catch (error) {
-            setError("Failed to save slide: " + (error as Error).message);
-        }
-    };
-
-
-    useEffect(() => {
-        const editor = getCurrentEditor();
-        if (slides.length > 0 && editor && editor.store && currentSlideIndex === 0) {
-            handleSelectSlide(0);
-        }
-    }, [slides, getCurrentEditor]);
+export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor, nickname }: SlidesProps) => {
+    const {
+        slides,
+        currentSlideIndex,
+        error,
+        successMsg,
+        isLoading,
+        handleAddSlide,
+        handleDeleteSlide,
+        handleSelectSlide,
+        handleSaveSlide
+    } = useSlidesLogic({ presentationId, nickname, getCurrentEditor, onSlideAdded });
 
     return (
         <div
@@ -184,85 +35,47 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
             }}
         >
             {owner && (
-                <div style={{
-                    padding: "1rem",
-                    borderBottom: "1px solid #f0f0f0",
-                    display: "flex",
-                    gap: "0.5rem",
-                    flexDirection: "column"
-                }}>
-                    <Button
-                        color="blue"
-                        variant="solid"
-                        onClick={handleSaveSlide}
-                        block
-                    >
+                <div
+                    style={{
+                        padding: "1rem",
+                        borderBottom: "1px solid #f0f0f0",
+                        display: "flex",
+                        gap: "0.5rem",
+                        flexDirection: "column",
+                    }}
+                >
+                    <Button color="blue" variant="solid" onClick={handleSaveSlide} block>
                         Save Slide
                     </Button>
 
-                    <Button
-                        color="cyan"
-                        variant="solid"
-                        onClick={handleClick}
-                        block
-                        loading={isLoading}
-                    >
+                    <Button color="cyan" variant="solid" onClick={handleAddSlide} block loading={isLoading}>
                         Add Slide
                     </Button>
                 </div>
-
-
             )}
 
-            {error && <Alert message={error} type="error" showIcon/>}
-            {successMsg && <Alert message={successMsg} type="success" showIcon/>}
+            {error && <Alert message={error} type="error" showIcon />}
+            {successMsg && <Alert message={successMsg} type="success" showIcon />}
 
-            <div style={{flex: 1, overflowY: "auto", padding: "1rem"}}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
                 {slides.length === 0 ? (
-                    <Title style={{textAlign: "center"}} type="secondary" level={4}>
+                    <Title style={{ textAlign: "center" }} type="secondary" level={4}>
                         No slides yet
                     </Title>
                 ) : (
                     slides
-                        .slice() // создаем копию массива, чтобы не мутировать оригинал
-                        .sort((a, b) => a.slideIndex - b.slideIndex) // сортируем по slideIndex
+                        .slice()
+                        .sort((a, b) => a.slideIndex - b.slideIndex)
                         .map((slide) => (
-                            <div
-                                onClick={() => handleSelectSlide(slide.slideIndex)}
+                            <SlideItem
                                 key={slide.id}
-                                className={slide.slideIndex === currentSlideIndex ? s.activeSlide : ""}
-                            style={{
-                                padding: "1rem",
-                                marginBottom: "1rem",
-                                border: "1px solid #d9d9d9",
-                                borderRadius: 4,
-                                background: "#fafafa",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                position: "relative",
-                                pointerEvents: !owner ? "none" : "auto",
-                                opacity: !owner ? 0.5 : 1,
-                            }}
-                        >
-                            <Text strong>Slide {slide.slideIndex + 1}</Text>
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<CloseOutlined />}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(slide.id);
-                                }}
-                                style={{
-                                    position: "absolute",
-                                    top: 14,
-                                    right: 8,
-                                    zIndex: 10,
-                                    color: "#999",
-                                }}
+                                slide={slide}
+                                owner={owner}
+                                currentSlideIndex={currentSlideIndex}
+                                onSelect={handleSelectSlide}
+                                onDelete={handleDeleteSlide}
                             />
-                        </div>
-                    ))
+                        ))
                 )}
             </div>
         </div>

@@ -43,16 +43,14 @@ export function UsersList({ usersInRoom, presentationId }: UsersListProps) {
 
         if (!newRole) return;
 
-        // Обновляем через API
         updateUserRole({
             id: presentationId,
-            nickname: targetNickname,  // Исправлено с targetNickname на nickname
+            nickname: targetNickname,
             newRole,
             requestedBy: currentNickname,
         });
 
-        // Отправляем через сокеты
-        emitRoleChange(targetUser.socketId, newRole);  // Используем targetUser.socketId
+        emitRoleChange(targetUser.socketId, newRole);
     };
 
     return (
