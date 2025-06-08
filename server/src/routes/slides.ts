@@ -52,27 +52,33 @@ router.post('/:id', async (req, res) => {
     }
 });
 
-router.patch('/:id', async (req, res) => {
-    const { id } = req.params;
+router.patch('/presentations/:presentationId/slides/:slideId', async (req, res) => {
+    const { presentationId, slideId } = req.params;
     const { content, nickname } = req.body;
 
     if (!nickname) {
         return res.status(400).json({ error: 'Nickname is required' });
     }
 
-    const slide = await prisma.slide.findUnique({ where: { id } });
-    if (!slide) {
-        return res.status(404).json({ error: 'Slide not found' });
-    }
-
-    const isCreator = await checkIsCreator(slide.presentationId, nickname);
+    const isCreator = await checkIsCreator(presentationId, nickname);
     if (!isCreator) {
         return res.status(403).json({ error: 'Only creator can update slides' });
     }
 
+    const slide = await prisma.slide.findFirst({
+        where: {
+            id: slideId,
+            presentationId,
+        },
+    });
+
+    if (!slide) {
+        return res.status(404).json({ error: 'Slide not found in this presentation' });
+    }
+
     try {
         const updatedSlide = await prisma.slide.update({
-            where: { id },
+            where: { id: slideId },
             data: { content },
         });
 
@@ -81,6 +87,7 @@ router.patch('/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to update slide' });
     }
 });
+
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const { nickname } = req.body;
