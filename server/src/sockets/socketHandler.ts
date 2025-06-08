@@ -33,7 +33,6 @@ export const setupSocket = (io: Server) => {
             const usersInRoom = Array.from(userRooms.entries())
                 .filter(([, data]) => data.presentationId === presentationId)
                 .map(([id, data]) => ({ socketId: id, ...data }));
-            console.log(usersInRoom)
 
             io.to(presentationId).emit('user_joined', {
                 users: usersInRoom,
