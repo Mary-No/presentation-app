@@ -24,7 +24,7 @@ const slidesSlice = createSlice({
         },
         updateSlideContent(
             state,
-            action: PayloadAction<{ id: string; content: string }>
+            action: PayloadAction<{ id: string; content: any }>
         ) {
             const slide = state.slides.find((s) => s.id === action.payload.id);
             if (slide) {

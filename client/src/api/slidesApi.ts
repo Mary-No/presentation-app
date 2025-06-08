@@ -24,7 +24,7 @@ export const slidesApi = baseApi.injectEndpoints({
         }),
         updateSlide: builder.mutation<
             Slide,
-            { presentationId: string; id: string; content: string; nickname: string }
+            { presentationId: string; id: string; content: any; nickname: string }
         >({
             query: ({ presentationId, id, content, nickname }) => ({
                 url: `/slides/presentations/${presentationId}/slides/${id}`,

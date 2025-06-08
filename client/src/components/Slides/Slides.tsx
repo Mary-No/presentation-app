@@ -6,6 +6,7 @@ import { CloseOutlined } from "@ant-design/icons";
 import {useAddSlideMutation, useDeleteSlideMutation, useUpdateSlideMutation} from "../../api/slidesApi.ts";
 import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
 import s from './Slides.module.scss'
+import isEqual from "lodash.isequal";
 
 const { Text } = Typography;
 
@@ -18,9 +19,7 @@ type SlidesProps = {
 
 export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }: SlidesProps) => {
     const slides = useAppSelector((state) => state.slides.slides);
-    // console.log(slides)
     const currentSlideIndex = useAppSelector((state) => state.slides.currentSlideIndex);
-    // console.log(currentSlideIndex);
     const [addSlide, { isLoading }] = useAddSlideMutation();
     const [deleteSlide] = useDeleteSlideMutation();
     const [updateSlide] = useUpdateSlideMutation()
@@ -35,8 +34,44 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                 setError("User is not logged in");
                 return;
             }
+
+            // Сохраняем текущий слайд
+            const currentSlide = slides.find(s => s.slideIndex === currentSlideIndex);
+            if (currentSlide) {
+                const editor = getCurrentEditor();
+                const currentSnapshot = editor?.store?.getSnapshot();
+                if (currentSnapshot) {
+                    await updateSlide({
+                        presentationId,
+                        id: currentSlide.id,
+                        nickname,
+                        content: currentSnapshot
+                    }).unwrap();
+                    dispatch(updateSlideContent({
+                        id: currentSlide.id,
+                        content: currentSnapshot
+                    }));
+                }
+            }
+
+            // Добавляем новый слайд
             const newSlide = await addSlide({ presentationId, nickname }).unwrap();
             dispatch(addSlideToStore(newSlide));
+
+            // Правильно сбрасываем редактор для нового слайда
+            const editor = getCurrentEditor();
+            if (editor) {
+                // Получаем чистый снапшот из редактора
+                const emptySnapshot = editor.store.getSnapshot();
+                // Очищаем все фигуры
+                emptySnapshot.store = {};
+                // Применяем очищенный снапшот
+                editor.store.loadSnapshot(emptySnapshot);
+            }
+
+            // Устанавливаем новый слайд как текущий
+            dispatch(setCurrentSlideIndex(newSlide.slideIndex));
+
             setSuccessMsg(`Slide ${slides.length + 1} was added`);
             setError(null);
             onSlideAdded();
@@ -72,23 +107,19 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
         }
 
         try {
-            // Сохраняем текущий слайд
             if (currentSlideIndex !== index) {
 
                 const currentSlide = slides.find((s) => s.slideIndex === currentSlideIndex);
                 if (currentSlide) {
                     const currentSnapshot = editor.store.getSnapshot();
-                    const currentContent = JSON.stringify(currentSnapshot);
-
-                    if (currentContent !== currentSlide.content) {
-                        await updateSlide({ presentationId:presentationId,id: currentSlide.id, nickname, content: currentContent }).unwrap();
-                        dispatch(updateSlideContent({ id: currentSlide.id, content: currentContent }));
+                    if (!isEqual(currentSnapshot, currentSlide.content)) {
+                        await updateSlide({ presentationId, id: currentSlide.id, nickname, content: currentSnapshot }).unwrap();
+                        dispatch(updateSlideContent({ id: currentSlide.id, content: currentSnapshot }));
                     }
                 }
             }
-            if (newSlide.content){
-                const snapshot = JSON.parse(newSlide.content);
-                editor.loadSnapshot(snapshot);
+            if (newSlide.content && newSlide.content.store && newSlide.content.schema) {
+                editor.loadSnapshot(newSlide.content);
             }
 
             dispatch(setCurrentSlideIndex(index));
@@ -97,14 +128,12 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
             setError("Failed to switch slide: " + (error as Error).message);
         }
     };
-
     useEffect(() => {
         const editor = getCurrentEditor();
         if (slides.length > 0 && editor && editor.store && currentSlideIndex === 0) {
             handleSelectSlide(0);
         }
     }, [slides, getCurrentEditor]);
-
 
     return (
         <div
