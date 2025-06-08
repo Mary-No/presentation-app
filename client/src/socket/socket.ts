@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 import type { Roles, Slide } from "../app/types";
 
-export const SOCKET_URL: string = 'http://localhost:4000/';
+export const SOCKET_URL: string = 'https://presentation-app-6a87.onrender.com/';
 export const socket = io(SOCKET_URL, {
     autoConnect: false,
 });
