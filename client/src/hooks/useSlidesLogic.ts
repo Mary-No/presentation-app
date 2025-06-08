@@ -13,7 +13,6 @@ export const useSlidesLogic = ({
                                    onSlideAdded,
                                }: {
     presentationId: string;
-    nickname: string | null;
     getCurrentEditor: () => any;
     onSlideAdded: () => void;
 }) => {

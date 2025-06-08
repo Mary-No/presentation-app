@@ -18,6 +18,13 @@ app.use(cors({
     origin: ['http://localhost:5173', 'https://mary-no.github.io'],
     credentials: true,
 }));
+app.use((req, res, next) => {
+    res.setHeader(
+        'Content-Security-Policy',
+        "style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;"
+    );
+    next();
+});
 app.use(express.json());
 app.use(requestLogger);
 app.use('/users', userRoutes);

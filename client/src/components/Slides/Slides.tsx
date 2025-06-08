@@ -9,10 +9,9 @@ type SlidesProps = {
     onSlideAdded: () => void;
     owner: boolean;
     getCurrentEditor: () => any;
-    nickname: string | null;
 };
 
-export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor, nickname }: SlidesProps) => {
+export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }: SlidesProps) => {
     const {
         slides,
         currentSlideIndex,
@@ -23,7 +22,7 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor, 
         handleDeleteSlide,
         handleSelectSlide,
         handleSaveSlide
-    } = useSlidesLogic({ presentationId, nickname, getCurrentEditor, onSlideAdded });
+    } = useSlidesLogic({ presentationId, getCurrentEditor, onSlideAdded });
 
     return (
         <div
