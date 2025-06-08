@@ -6,7 +6,6 @@ import { CloseOutlined } from "@ant-design/icons";
 import {useAddSlideMutation, useDeleteSlideMutation, useUpdateSlideMutation} from "../../api/slidesApi.ts";
 import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
 import s from './Slides.module.scss'
-import {loadSnapshot, type TLRecord} from "@tldraw/tldraw";
 
 
 
@@ -62,7 +61,6 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
         }
     };
     const handleSelectSlide = async (index: number) => {
-        debugger
         const editor = getCurrentEditor();
         if (!editor || !editor.store) {
             setError("Editor is not ready");
@@ -78,13 +76,14 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
         try {
             // Сохраняем текущий слайд
             if (currentSlideIndex !== index) {
+
                 const currentSlide = slides.find((s) => s.slideIndex === currentSlideIndex);
                 if (currentSlide) {
                     const currentSnapshot = editor.store.getSnapshot();
                     const currentContent = JSON.stringify(currentSnapshot);
 
                     if (currentContent !== currentSlide.content) {
-                        await updateSlide({ id: currentSlide.id, nickname, content: currentContent }).unwrap();
+                        await updateSlide({ presentationId:presentationId,id: currentSlide.id, nickname, content: currentContent }).unwrap();
                         dispatch(updateSlideContent({ id: currentSlide.id, content: currentContent }));
                     }
                 }
@@ -95,16 +94,8 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                 editor.store.createPage();
                 editor.store.setCurrentPageId(editor.store.pages[0].id);
             } else {
-                // Преобразуем массив в объект записей
-                const snapshotArray = JSON.parse(newSlide.content) as TLRecord[];
-
-                const documentRecords = snapshotArray.reduce<Record<string, TLRecord>>((acc, record) => {
-                    acc[record.id] = record;
-                    return acc;
-                }, {});
-
-                // Загружаем только document в редактор
-                loadSnapshot(editor.store, documentRecords);
+                const snapshot = JSON.parse(newSlide.content);
+                editor.loadSnapshot(snapshot);
             }
 
             dispatch(setCurrentSlideIndex(index));
