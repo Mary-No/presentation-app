@@ -80,9 +80,9 @@ export const setupSocket = (io: Server) => {
         socket.on('add_slide', ({ slide }) => {
             const user = userRooms.get(socket.id);
             if (user?.role === 'creator') {
-                io.to(user.presentationId).emit('slide_added', {
-                    slide,
-                });
+                io.to(user.presentationId).emit('slide_added', { slide });
+            } else {
+                socket.emit('slide_error', { message: 'Only creator can add slides' });
             }
         });
 

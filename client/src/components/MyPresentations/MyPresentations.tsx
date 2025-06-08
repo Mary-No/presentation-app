@@ -73,7 +73,7 @@ export const MyPresentations = () => {
             ) : userPresentations.length > 0 ? (
                 <PresentationGallery presentations={userPresentations} type="my" />
             ) : (
-                <Paragraph>You don't have your own presentations yet.</Paragraph>
+                <Paragraph style={{ textAlign: 'center', marginTop: '2rem', fontSize:"1rem"}}>You don't have your own presentations yet.</Paragraph>
             )}
         </div>
     )

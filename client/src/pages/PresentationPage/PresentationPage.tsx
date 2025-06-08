@@ -7,7 +7,9 @@ import { useSocketConnection } from "../../hooks/useSocketConnection";
 import { useJoinPresentation } from "../../hooks/useJoinPresentation";
 import { useCursorSync } from "../../hooks/useCursorSync";
 import s from "./PresentationPage.module.scss"
-import { useRef } from "react";
+import {useEffect, useRef } from "react";
+import { disconnectSocket } from "../../socket/socket.ts";
+import { setEditorInstance } from "../../app/editorInstance.ts";
 
 
 export const PresentationPage = () => {
@@ -16,9 +18,13 @@ export const PresentationPage = () => {
     const editorRef = useRef<any>(null);
     const { usersInRoom } = useSocketConnection();
     const role = useJoinPresentation({ presentation, nickname });
-    const owner = nickname === presentation?.ownerNickname;
+    const owner = role === "creator";
     const { onMouseMove, remoteCursors } = useCursorSync({ nickname, usersInRoom });
-
+    useEffect(() => {
+        return () => {
+            disconnectSocket();
+        };
+    }, []);
 
     if (isLoading) return <div>Loading...</div>;
     if (isError || !presentation) return <div>Error loading presentation</div>;
@@ -35,9 +41,12 @@ export const PresentationPage = () => {
             </div>
             <div className={s.drawTools}>
                 <div className={s.presentationTitle}><h3>{presentation.title}</h3></div>
-                <DrawBoard role={role} onEditorMount={(editor) => (editorRef.current = editor)}/>
+                <DrawBoard role={role} onEditorMount={(editor) => {
+                    editorRef.current = editor;
+                    setEditorInstance(editor);
+                }} />
             </div>
-            <UsersList usersInRoom={usersInRoom} />
+            <UsersList presentationId={presentation.id} usersInRoom={usersInRoom} />
             {Object.entries(remoteCursors).map(([socketId, cursor]) => (
                 <RemoteCursor key={socketId} {...cursor} />
             ))}

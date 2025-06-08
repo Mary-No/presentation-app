@@ -31,8 +31,16 @@ const slidesSlice = createSlice({
                 slide.content = action.payload.content;
             }
         },
-        removeSlideFromStore(state, action: PayloadAction<string>) {
-            state.slides = state.slides.filter((s) => s.id !== action.payload);
+        removeSlideFromStore: (state, action) => {
+            const idToRemove = action.payload;
+            state.slides = state.slides.filter(slide => slide.id !== idToRemove);
+
+            // Переиндексация оставшихся слайдов
+            state.slides.forEach((slide, index) => {
+                slide.slideIndex = index;
+            });
+
+            // Корректировка текущего индекса, если нужно
             if (state.currentSlideIndex >= state.slides.length) {
                 state.currentSlideIndex = Math.max(0, state.slides.length - 1);
             }

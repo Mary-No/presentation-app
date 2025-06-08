@@ -32,6 +32,17 @@ export const presentationApi = baseApi.injectEndpoints({
             }),
             providesTags: ['Slides'],
         }),
+        updateUserRole: builder.mutation<
+            { presentationId: string; userNickname: string; role: string },
+            { id: string; nickname: string; newRole: string; requestedBy: string }
+        >({
+            query: ({ id, nickname, newRole, requestedBy }) => ({
+                url: `/presentations/${id}/roles`,
+                method: 'PATCH',
+                body: { nickname, newRole, requestedBy },
+            }),
+            invalidatesTags: ['Presentations'],
+        }),
         deletePresentation: builder.mutation<
             { message: string },
             { id: string; nickname: string }
@@ -47,4 +58,4 @@ export const presentationApi = baseApi.injectEndpoints({
     }),
 })
 
-export const {  useGetUserPresentationsQuery,useGetAllPresentationsQuery, useCreatePresentationMutation, useGetPresentationByIdQuery, useDeletePresentationMutation  } = presentationApi
+export const {  useGetUserPresentationsQuery,useGetAllPresentationsQuery, useCreatePresentationMutation, useGetPresentationByIdQuery, useDeletePresentationMutation, useUpdateUserRoleMutation } = presentationApi

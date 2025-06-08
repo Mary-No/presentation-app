@@ -24,12 +24,13 @@ export const AllPresentations = () => {
     }
 
     return (
-        <div style={{ marginTop: "3rem" }}>
+        <div style={{ marginTop: "1rem" }}>
             <Input.Search
                 placeholder="Search presentations"
                 onSearch={handleSearch}
                 style={{ width: "60%", marginBottom: "1rem" }}
                 allowClear
+                size="large"
             />
 
             <PresentationGallery presentations={allPresentations} />

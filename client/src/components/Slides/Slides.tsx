@@ -4,9 +4,10 @@ import { useAppSelector, useAppDispatch } from "../../app/hooks.ts";
 import Title from "antd/lib/typography/Title";
 import { CloseOutlined } from "@ant-design/icons";
 import {useAddSlideMutation, useDeleteSlideMutation, useUpdateSlideMutation} from "../../api/slidesApi.ts";
-import {addSlideToStore, removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
+import {removeSlideFromStore, setCurrentSlideIndex, updateSlideContent} from "../../api/slidesSlice.ts";
 import s from './Slides.module.scss'
 import isEqual from "lodash.isequal";
+import {emitAddSlide, emitRemoveSlide, emitSlideUpdate} from "../../socket/socket.ts";
 
 const { Text } = Typography;
 
@@ -34,9 +35,9 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                 setError("User is not logged in");
                 return;
             }
-
-            // Сохраняем текущий слайд
             const currentSlide = slides.find(s => s.slideIndex === currentSlideIndex);
+            const newSlide = await addSlide({ presentationId, nickname }).unwrap();
+            emitAddSlide(newSlide)
             if (currentSlide) {
                 const editor = getCurrentEditor();
                 const currentSnapshot = editor?.store?.getSnapshot();
@@ -51,27 +52,19 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                         id: currentSlide.id,
                         content: currentSnapshot
                     }));
+                    emitSlideUpdate(currentSlide.id,
+                        currentSnapshot)
                 }
             }
 
-            // Добавляем новый слайд
-            const newSlide = await addSlide({ presentationId, nickname }).unwrap();
-            dispatch(addSlideToStore(newSlide));
-
-            // Правильно сбрасываем редактор для нового слайда
             const editor = getCurrentEditor();
             if (editor) {
-                // Получаем чистый снапшот из редактора
                 const emptySnapshot = editor.store.getSnapshot();
-                // Очищаем все фигуры
                 emptySnapshot.store = {};
-                // Применяем очищенный снапшот
                 editor.store.loadSnapshot(emptySnapshot);
             }
 
-            // Устанавливаем новый слайд как текущий
             dispatch(setCurrentSlideIndex(newSlide.slideIndex));
-
             setSuccessMsg(`Slide ${slides.length + 1} was added`);
             setError(null);
             onSlideAdded();
@@ -85,8 +78,16 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
 
     const handleDelete = async (id: string) => {
         try {
+            const slideToDelete = slides.find(s => s.id === id);
             await deleteSlide({ id, nickname }).unwrap();
             dispatch(removeSlideFromStore(id));
+            emitRemoveSlide(id);
+            if (slideToDelete?.slideIndex === currentSlideIndex) {
+                const newIndex = Math.max(0, currentSlideIndex - 1);
+                dispatch(setCurrentSlideIndex(newIndex));
+                handleSelectSlide(newIndex);
+            }
+
             setSuccessMsg("Slide deleted successfully");
         } catch (err: any) {
             const errorMessage = err?.data?.error || "Failed to delete slide";
@@ -108,13 +109,14 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
 
         try {
             if (currentSlideIndex !== index) {
-
                 const currentSlide = slides.find((s) => s.slideIndex === currentSlideIndex);
                 if (currentSlide) {
                     const currentSnapshot = editor.store.getSnapshot();
                     if (!isEqual(currentSnapshot, currentSlide.content)) {
                         await updateSlide({ presentationId, id: currentSlide.id, nickname, content: currentSnapshot }).unwrap();
                         dispatch(updateSlideContent({ id: currentSlide.id, content: currentSnapshot }));
+                        emitSlideUpdate(currentSlide.id,
+                            currentSnapshot)
                     }
                 }
             }
@@ -128,6 +130,43 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
             setError("Failed to switch slide: " + (error as Error).message);
         }
     };
+    const handleSaveSlide = async () => {
+        const editor = getCurrentEditor();
+        if (!editor || !editor.store) {
+            setError("Editor is not ready");
+            return;
+        }
+
+        const currentSlide = slides.find(s => s.slideIndex === currentSlideIndex);
+        if (!currentSlide) {
+            setError("Current slide not found");
+            return;
+        }
+
+        try {
+            const currentSnapshot = editor.store.getSnapshot();
+
+            if (!isEqual(currentSnapshot, currentSlide.content)) {
+                await updateSlide({
+                    presentationId,
+                    id: currentSlide.id,
+                    nickname,
+                    content: currentSnapshot,
+                }).unwrap();
+
+                dispatch(updateSlideContent({ id: currentSlide.id, content: currentSnapshot }));
+                emitSlideUpdate(currentSlide.id, currentSnapshot);
+                setSuccessMsg("Slide saved successfully");
+            } else {
+                setSuccessMsg("No changes to save");
+            }
+            setError(null);
+        } catch (error) {
+            setError("Failed to save slide: " + (error as Error).message);
+        }
+    };
+
+
     useEffect(() => {
         const editor = getCurrentEditor();
         if (slides.length > 0 && editor && editor.store && currentSlideIndex === 0) {
@@ -145,7 +184,22 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
             }}
         >
             {owner && (
-                <div style={{ padding: "1rem", borderBottom: "1px solid #f0f0f0" }}>
+                <div style={{
+                    padding: "1rem",
+                    borderBottom: "1px solid #f0f0f0",
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexDirection: "column"
+                }}>
+                    <Button
+                        color="blue"
+                        variant="solid"
+                        onClick={handleSaveSlide}
+                        block
+                    >
+                        Save Slide
+                    </Button>
+
                     <Button
                         color="cyan"
                         variant="solid"
@@ -156,22 +210,27 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                         Add Slide
                     </Button>
                 </div>
+
+
             )}
 
-            {error && <Alert message={error} type="error" showIcon />}
-            {successMsg && <Alert message={successMsg} type="success" showIcon />}
+            {error && <Alert message={error} type="error" showIcon/>}
+            {successMsg && <Alert message={successMsg} type="success" showIcon/>}
 
-            <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+            <div style={{flex: 1, overflowY: "auto", padding: "1rem"}}>
                 {slides.length === 0 ? (
-                    <Title style={{ textAlign: "center" }} type="secondary" level={4}>
+                    <Title style={{textAlign: "center"}} type="secondary" level={4}>
                         No slides yet
                     </Title>
                 ) : (
-                    slides.map((slide) => (
-                        <div
-                            onClick={() => handleSelectSlide(slide.slideIndex)}
-                            key={slide.id}
-                            className={slide.slideIndex===currentSlideIndex ? s.activeSlide: ""}
+                    slides
+                        .slice() // создаем копию массива, чтобы не мутировать оригинал
+                        .sort((a, b) => a.slideIndex - b.slideIndex) // сортируем по slideIndex
+                        .map((slide) => (
+                            <div
+                                onClick={() => handleSelectSlide(slide.slideIndex)}
+                                key={slide.id}
+                                className={slide.slideIndex === currentSlideIndex ? s.activeSlide : ""}
                             style={{
                                 padding: "1rem",
                                 marginBottom: "1rem",
@@ -181,6 +240,8 @@ export const Slides = ({ presentationId, onSlideAdded, owner, getCurrentEditor }
                                 display: "flex",
                                 justifyContent: "space-between",
                                 position: "relative",
+                                pointerEvents: !owner ? "none" : "auto",
+                                opacity: !owner ? 0.5 : 1,
                             }}
                         >
                             <Text strong>Slide {slide.slideIndex + 1}</Text>

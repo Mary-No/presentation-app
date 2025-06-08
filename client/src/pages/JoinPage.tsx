@@ -48,12 +48,12 @@ export const JoinPage = () => {
                         padding: 24,
                         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                         borderRadius: 8,
-                        backgroundColor: "white"
+                        backgroundColor: "white",
                     }}
                 >
                     <Title level={2}>Collaborative Presentations</Title>
-                    <Paragraph>
-                        Enter your nickname to start creating and editing presentations in real time.
+                    <Paragraph style={{textAlign:"center"}}>
+                        Start creating and editing presentations in real time
                     </Paragraph>
 
                     <Form
